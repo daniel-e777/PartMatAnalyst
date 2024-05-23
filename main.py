@@ -7,7 +7,7 @@ print("Good bye work PC, hello home PC!")
 fishey = "<oOo><\n"
 
 def whale():
-    orca_array = ["Free Willy #1", "Free Willy #2", "Free Willy #3", "Free Willy #n"]
+    orca_array = ["Free Willy #1", "Free Willy #2", "Free Willy #3", "Charlie Foxtrot"]
     for each in orca_array: print(f"Jump, {each}!")
     print(fishey)
 
