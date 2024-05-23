@@ -14,7 +14,7 @@ def whale():
 def fish(limit):
     flying_fish = {"Captain": "Oscar", "Admiral": "Rudi", "Rear Admiral": "Carl", "Drunken Sailor": "Alan"}
     for key, value in flying_fish.items(): print(f"Fly, {key} {value}!")
-    for i in range(0, limit):
+    for i in range(limit):
         for each in flying_fish.values(): print(each[i])
     print(fishey)
 
