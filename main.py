@@ -15,5 +15,5 @@ def fish(limit):
         for each in flying_fish.values(): print(each[0])
 
 whale()
-print("----")
+print("<oôo><")
 fish(1)
