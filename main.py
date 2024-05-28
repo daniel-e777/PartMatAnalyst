@@ -4,7 +4,7 @@ print("The One Piece is Orcas")
 print("just wanna go home now!!!")
 print("Good bye work PC, hello home PC!")
 
-fishey = "<oOo><\n"
+fishey: str = "<oOo><\n"
 
 def whale():
     orca_array = ["Free Willy #1", "Free Willy #2", "Free Willy #3", "Charlie Foxtrot"]
