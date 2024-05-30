@@ -24,15 +24,19 @@ class CSVViewerApp:
         self.canvas.create_image(0, 0, image=self.bg_photo, anchor="nw")
 
         # Menübutton und Datum/Uhrzeit
-        self.menu_button = tk.Button(self.canvas, text="Menübutton")
+        self.menu_button = tk.Button(root, text="Menübutton")
         self.menu_button_window = self.canvas.create_window(10, 10, anchor="nw", window=self.menu_button)
 
-        self.datetime_label = tk.Label(self.canvas, text="Datum Uhrzeit")
+        self.datetime_label_bg = tk.Label(root, bg="white", width=20)
+        self.datetime_label_bg_window = self.canvas.create_window(1100, 10, anchor="ne", window=self.datetime_label_bg)
+
+        self.datetime_label = tk.Label(root, text="", bg="white", width=20)
         self.datetime_label_window = self.canvas.create_window(1100, 10, anchor="ne", window=self.datetime_label)
+        self.update_datetime()
 
         # Plot Bereich
         self.figure, self.ax = plt.subplots()
-        self.canvas_figure = FigureCanvasTkAgg(self.figure, self.canvas)
+        self.canvas_figure = FigureCanvasTkAgg(self.figure, root)
         self.canvas_figure.get_tk_widget().pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=20, pady=20)
         self.canvas.create_window(20, 50, anchor="nw", window=self.canvas_figure.get_tk_widget())
 
@@ -97,15 +101,21 @@ class CSVViewerApp:
 
     def plot_data(self, df):
         self.ax.clear()
-        self.ax.plot(df['time_in_hours'], df['P1'], marker='o', label='P1')
-        self.ax.plot(df['time_in_hours'], df['P2'], marker='x', label='P2')
+        self.ax.plot(df['time_in_hours'], df['P1'], marker='o', label='P1', alpha=0.7)
+        self.ax.plot(df['time_in_hours'], df['P2'], marker='x', label='P2', alpha=0.7)
         self.ax.set_title('Messwerte von P1 und P2')
         self.ax.set_xlabel('Zeit (Stunden)')
         self.ax.set_ylabel('Werte (P1, P2)')
         self.ax.set_xticks(range(0, 25))  # Zeigt die Stunden von 0 bis 24
-        self.ax.grid(True)
+        self.ax.grid(True, alpha=0.7)
         self.ax.legend()
         self.canvas_figure.draw()
+
+    def update_datetime(self):
+        now = datetime.now()
+        current_time = now.strftime("%Y-%m-%d %H:%M:%S")
+        self.datetime_label.config(text=current_time)
+        self.root.after(1000, self.update_datetime)
 
 if __name__ == "__main__":
     root = tk.Tk()
