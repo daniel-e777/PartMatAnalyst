@@ -8,6 +8,7 @@ import csv
 from datetime import datetime
 
 bg_color = "#87cefa"
+
 class CSVViewerApp:
     def __init__(self, root):
         self.root = root
@@ -19,13 +20,13 @@ class CSVViewerApp:
         self.canvas.pack(fill="both", expand=True)
 
         # Hintergrundbild laden und skalieren
-        self.bg_image = Image.open("orcaparadise.jpg") 
+        self.bg_image = Image.open("orcaparadise.jpg")
         self.bg_image = self.bg_image.resize((1200, 700), Image.Resampling.LANCZOS)
         self.bg_photo = ImageTk.PhotoImage(self.bg_image)
         self.canvas.create_image(0, 0, image=self.bg_photo, anchor="nw")
 
         # Menübutton und Datum/Uhrzeit
-        self.menu_button = tk.Button(root, text="Menübutton",bg="#104e8b",fg="white")
+        self.menu_button = tk.Button(root, text="Menübutton", bg="#104e8b", fg="white")
         self.menu_button_window = self.canvas.create_window(20, 10, anchor="nw", window=self.menu_button)
 
         self.datetime_label_bg = tk.Label(root, bg=bg_color, width=20)
@@ -36,35 +37,31 @@ class CSVViewerApp:
         self.update_datetime()
 
         # Graph erstellen
-        self.figure, self.ax = plt.subplots()
-        self.ax.imshow(self.bg_image, aspect='auto', extent=[0, 10, 0, 10], zorder=-1)
+        self.figure, self.ax = plt.subplots(figsize=(8, 5))  
         self.figure.patch.set_facecolor("#87cefa")
         self.canvas_figure = FigureCanvasTkAgg(self.figure, root)
-        self.canvas_figure.get_tk_widget().pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=20, pady=20)
-        self.canvas.create_window(20, 50, anchor="nw", window=self.canvas_figure.get_tk_widget())
-        
+        self.canvas_figure.get_tk_widget().pack(side=tk.LEFT, padx=20, pady=20)
+        self.canvas.create_window(40, 100, anchor="nw", window=self.canvas_figure.get_tk_widget())
 
         # Steuerbereich auf der rechten Seite
-        self.controls_frame = tk.Frame(self.canvas,bg=bg_color)
+        self.controls_frame = tk.Frame(self.canvas, bg=bg_color)
         self.controls_frame_window = self.canvas.create_window(980, 50, anchor="nw", window=self.controls_frame)
 
         # Dateiauswahl
-        self.file_button = tk.Button(self.controls_frame, text="Datei auswählen", command=self.load_csv,bg="#104e8b",fg="white")
+        self.file_button = tk.Button(self.controls_frame, text="Datei auswählen", command=self.load_csv, bg="#104e8b", fg="white")
         self.file_button.pack(pady=5)
 
-        # Detailwerte
-        self.details_label = tk.Label(self.controls_frame, text="Detailwerte (min, max, avg, Temp)",bg="#104e8b",fg="white")
-        self.details_label.pack(pady=5)
+    
 
         # Logo
-        self.logo_image = Image.open("orca.png")  
-        self.logo_image = self.logo_image.resize((150, 150), Image.Resampling.LANCZOS)  
+        self.logo_image = Image.open("orca.png")
+        self.logo_image = self.logo_image.resize((150, 150), Image.Resampling.LANCZOS)
         self.logo_photo = ImageTk.PhotoImage(self.logo_image)
         self.logo_label = tk.Label(self.controls_frame, image=self.logo_photo)
         self.logo_label.pack(pady=20)
 
         # Download Button
-        self.download_button = tk.Button(self.controls_frame, text="Download",bg="#104e8b",fg="white")
+        self.download_button = tk.Button(self.controls_frame, text="Download", command=self.download_plot, bg="#104e8b", fg="white")
         self.download_button.pack(pady=5)
 
     def load_csv(self):
@@ -83,37 +80,56 @@ class CSVViewerApp:
             with open(file_path, mode='r', encoding='utf-8') as file:
                 reader = csv.DictReader(file, delimiter=';')
                 for row in reader:
-                    if 'timestamp' in row and 'P1' in row and 'P2' in row:
+                    if 'timestamp' in row and 'temperature' in row:
                         row['timestamp'] = datetime.strptime(row['timestamp'], '%Y-%m-%dT%H:%M:%S')
                         data.append(row)
                     else:
-                        messagebox.showerror("Fehler", "Die CSV-Datei muss die Spalten 'timestamp', 'P1' und 'P2' enthalten.")
+                        messagebox.showerror("Fehler", "Die CSV-Datei muss die Spalten 'timestamp' und 'temperature' enthalten.")
                         return
 
-            df = pd.DataFrame(data)
-            df['timestamp'] = pd.to_datetime(df['timestamp'])
-            df['time_in_hours'] = df['timestamp'].dt.hour + df['timestamp'].dt.minute / 60 + df['timestamp'].dt.second / 3600
-            df['P1'] = pd.to_numeric(df['P1'])
-            df['P2'] = pd.to_numeric(df['P2'])
+            self.df = pd.DataFrame(data)
+            self.df['timestamp'] = pd.to_datetime(self.df['timestamp'])
+            self.df['time_in_hours'] = self.df['timestamp'].dt.hour + self.df['timestamp'].dt.minute / 60 + self.df['timestamp'].dt.second / 3600
+            self.df['temperature'] = pd.to_numeric(self.df['temperature'])
             
-            if df.empty:
+            if self.df.empty:
                 messagebox.showinfo("Information", "Keine Daten gefunden.")
             else:
-                self.plot_data(df)
+                self.plot_data()
         except Exception as e:
             messagebox.showerror("Fehler", f"Fehler beim Laden der Datei: {e}")
 
-    def plot_data(self, df):
+    def plot_data(self):
         self.ax.clear()
-        self.ax.plot(df['time_in_hours'], df['P1'], marker='o', label='P1', alpha=0.7)
-        self.ax.plot(df['time_in_hours'], df['P2'], marker='x', label='P2', alpha=0.7)
-        self.ax.set_title('Messwerte von P1 und P2')
-        self.ax.set_xlabel('Zeit (Stunden)')
-        self.ax.set_ylabel('Werte (P1, P2)')
-        self.ax.set_xticks(range(0, 25))  
-        self.ax.grid(True, alpha=0.7)
-        self.ax.legend()
+
+        # Datum aus den Daten extrahieren
+        date_str = self.df['timestamp'].dt.date.iloc[0].strftime('%d.%m.%Y')
+
+        # Plot für Temperatur
+        self.ax.plot(self.df['time_in_hours'], self.df['temperature'], color='black', alpha=0.7)
+        self.ax.set_title(f'Temperatur am {date_str}')
+        self.ax.set_xlabel('Zeit in Stunden')
+        self.ax.set_ylabel('Temperatur (°C)')
+        self.ax.set_xlim(0, 24)
+        self.ax.set_xticks(range(0, 25))
+        self.ax.set_xticklabels(range(0, 25)) 
+        self.ax.grid(True, alpha=0.5)
+        self.ax.legend(['Temperature'])
+
         self.canvas_figure.draw()
+
+    def download_plot(self):
+        file_path = filedialog.asksaveasfilename(
+            defaultextension=".png",
+            filetypes=[("PNG files", "*.png"), ("All files", "*.*")],
+            title="Speichern unter"
+        )
+        if file_path:
+            try:
+                self.figure.savefig(file_path)
+                messagebox.showinfo("Erfolg", "Der Graph wurde erfolgreich gespeichert.")
+            except Exception as e:
+                messagebox.showerror("Fehler", f"Fehler beim Speichern des Graphen: {e}")
 
     def update_datetime(self):
         now = datetime.now()
