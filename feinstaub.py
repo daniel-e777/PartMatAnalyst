@@ -7,6 +7,7 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import csv
 from datetime import datetime
 
+bg_color = "#87cefa"
 class CSVViewerApp:
     def __init__(self, root):
         self.root = root
@@ -24,46 +25,46 @@ class CSVViewerApp:
         self.canvas.create_image(0, 0, image=self.bg_photo, anchor="nw")
 
         # Menübutton und Datum/Uhrzeit
-        self.menu_button = tk.Button(root, text="Menübutton")
+        self.menu_button = tk.Button(root, text="Menübutton",bg="#104e8b",fg="white")
         self.menu_button_window = self.canvas.create_window(20, 10, anchor="nw", window=self.menu_button)
 
-        self.datetime_label_bg = tk.Label(root, bg="white", width=20)
+        self.datetime_label_bg = tk.Label(root, bg=bg_color, width=20)
         self.datetime_label_bg_window = self.canvas.create_window(1147, 10, anchor="ne", window=self.datetime_label_bg)
 
-        self.datetime_label = tk.Label(root, text="", bg="white", width=20)
+        self.datetime_label = tk.Label(root, text="", bg=bg_color, width=20)
         self.datetime_label_window = self.canvas.create_window(1147, 10, anchor="ne", window=self.datetime_label)
         self.update_datetime()
 
         # Graph erstellen
         self.figure, self.ax = plt.subplots()
         self.ax.imshow(self.bg_image, aspect='auto', extent=[0, 10, 0, 10], zorder=-1)
-        self.figure.patch.set_facecolor("#424a46")
+        self.figure.patch.set_facecolor("#87cefa")
         self.canvas_figure = FigureCanvasTkAgg(self.figure, root)
         self.canvas_figure.get_tk_widget().pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=20, pady=20)
         self.canvas.create_window(20, 50, anchor="nw", window=self.canvas_figure.get_tk_widget())
         
 
         # Steuerbereich auf der rechten Seite
-        self.controls_frame = tk.Frame(self.canvas)
+        self.controls_frame = tk.Frame(self.canvas,bg=bg_color)
         self.controls_frame_window = self.canvas.create_window(980, 50, anchor="nw", window=self.controls_frame)
 
         # Dateiauswahl
-        self.file_button = tk.Button(self.controls_frame, text="Datei auswählen", command=self.load_csv)
+        self.file_button = tk.Button(self.controls_frame, text="Datei auswählen", command=self.load_csv,bg="#104e8b",fg="white")
         self.file_button.pack(pady=5)
 
         # Detailwerte
-        self.details_label = tk.Label(self.controls_frame, text="Detailwerte (min, max, avg, Temp)")
+        self.details_label = tk.Label(self.controls_frame, text="Detailwerte (min, max, avg, Temp)",bg="#104e8b",fg="white")
         self.details_label.pack(pady=5)
 
         # Logo
-        self.logo_image = Image.open("orcanado.png")  
+        self.logo_image = Image.open("orca.png")  
         self.logo_image = self.logo_image.resize((150, 150), Image.Resampling.LANCZOS)  
         self.logo_photo = ImageTk.PhotoImage(self.logo_image)
         self.logo_label = tk.Label(self.controls_frame, image=self.logo_photo)
         self.logo_label.pack(pady=20)
 
         # Download Button
-        self.download_button = tk.Button(self.controls_frame, text="Download")
+        self.download_button = tk.Button(self.controls_frame, text="Download",bg="#104e8b",fg="white")
         self.download_button.pack(pady=5)
 
     def load_csv(self):
@@ -116,7 +117,7 @@ class CSVViewerApp:
 
     def update_datetime(self):
         now = datetime.now()
-        current_time = now.strftime("%d.%m%Y %H:%M:%S")
+        current_time = now.strftime("%d.%m.%Y %H:%M:%S")
         self.datetime_label.config(text=current_time)
         self.root.after(1000, self.update_datetime)
 
