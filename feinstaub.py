@@ -1,5 +1,6 @@
 import tkinter as tk
 from tkinter import filedialog, messagebox
+from PIL import Image, ImageTk
 import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
@@ -12,21 +13,32 @@ class CSVViewerApp:
         self.root.title("CSV Viewer")
         self.root.geometry("1200x700")
 
-        # Menübutton und Datum/Uhrzeit
-        self.menu_button = tk.Button(root, text="Menübutton")
-        self.menu_button.pack(side=tk.TOP, anchor=tk.W, padx=10, pady=10)
+        # Canvas erstellen
+        self.canvas = tk.Canvas(root, width=1200, height=700)
+        self.canvas.pack(fill="both", expand=True)
 
-        self.datetime_label = tk.Label(root, text="Datum Uhrzeit")
-        self.datetime_label.pack(side=tk.TOP, anchor=tk.E, padx=10, pady=10)
+        # Hintergrundbild laden und skalieren
+        self.bg_image = Image.open("orcaparadise.jpg")  # Update the path to your background image
+        self.bg_image = self.bg_image.resize((1200, 700), Image.Resampling.LANCZOS)
+        self.bg_photo = ImageTk.PhotoImage(self.bg_image)
+        self.canvas.create_image(0, 0, image=self.bg_photo, anchor="nw")
+
+        # Menübutton und Datum/Uhrzeit
+        self.menu_button = tk.Button(self.canvas, text="Menübutton")
+        self.menu_button_window = self.canvas.create_window(10, 10, anchor="nw", window=self.menu_button)
+
+        self.datetime_label = tk.Label(self.canvas, text="Datum Uhrzeit")
+        self.datetime_label_window = self.canvas.create_window(1100, 10, anchor="ne", window=self.datetime_label)
 
         # Plot Bereich
         self.figure, self.ax = plt.subplots()
-        self.canvas = FigureCanvasTkAgg(self.figure, root)
-        self.canvas.get_tk_widget().pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=20, pady=20)
+        self.canvas_figure = FigureCanvasTkAgg(self.figure, self.canvas)
+        self.canvas_figure.get_tk_widget().pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=20, pady=20)
+        self.canvas.create_window(20, 50, anchor="nw", window=self.canvas_figure.get_tk_widget())
 
         # Steuerbereich auf der rechten Seite
-        self.controls_frame = tk.Frame(root)
-        self.controls_frame.pack(side=tk.RIGHT, fill=tk.Y, padx=20, pady=20)
+        self.controls_frame = tk.Frame(self.canvas)
+        self.controls_frame_window = self.canvas.create_window(980, 50, anchor="nw", window=self.controls_frame)
 
         # Dateiauswahl
         self.file_button = tk.Button(self.controls_frame, text="Datei auswählen", command=self.load_csv)
@@ -37,7 +49,10 @@ class CSVViewerApp:
         self.details_label.pack(pady=5)
 
         # Logo
-        self.logo_label = tk.Label(self.controls_frame, text="LOGO PLATZHALTER", fg="blue")
+        self.logo_image = Image.open("orcanado.png")  # Update the path to your logo
+        self.logo_image = self.logo_image.resize((150, 150), Image.Resampling.LANCZOS)  # Resize the image
+        self.logo_photo = ImageTk.PhotoImage(self.logo_image)
+        self.logo_label = tk.Label(self.controls_frame, image=self.logo_photo)
         self.logo_label.pack(pady=20)
 
         # Download Button
@@ -90,7 +105,7 @@ class CSVViewerApp:
         self.ax.set_xticks(range(0, 25))  # Zeigt die Stunden von 0 bis 24
         self.ax.grid(True)
         self.ax.legend()
-        self.canvas.draw()
+        self.canvas_figure.draw()
 
 if __name__ == "__main__":
     root = tk.Tk()
