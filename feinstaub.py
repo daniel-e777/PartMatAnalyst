@@ -27,7 +27,7 @@ class CSVViewerApp:
 
         # Menübutton und Datum/Uhrzeit
         self.menu_button = tk.Button(root, text="Menübutton", bg="#104e8b", fg="white")
-        self.menu_button_window = self.canvas.create_window(20, 10, anchor="nw", window=self.menu_button)
+        self.menu_button_window = self.canvas.create_window(40, 10, anchor="nw", window=self.menu_button)
 
         self.datetime_label_bg = tk.Label(root, bg=bg_color, width=20)
         self.datetime_label_bg_window = self.canvas.create_window(1147, 10, anchor="ne", window=self.datetime_label_bg)
@@ -39,13 +39,15 @@ class CSVViewerApp:
         # Graph erstellen
         self.figure, self.ax = plt.subplots(figsize=(8, 5))  
         self.figure.patch.set_facecolor("#87cefa")
+        self.ax.imshow(self.bg_image, aspect='auto', extent=[0, 10, 0, 10], zorder=-1)
         self.canvas_figure = FigureCanvasTkAgg(self.figure, root)
         self.canvas_figure.get_tk_widget().pack(side=tk.LEFT, padx=20, pady=20)
         self.canvas.create_window(40, 100, anchor="nw", window=self.canvas_figure.get_tk_widget())
+        
 
         # Steuerbereich auf der rechten Seite
         self.controls_frame = tk.Frame(self.canvas, bg=bg_color)
-        self.controls_frame_window = self.canvas.create_window(980, 50, anchor="nw", window=self.controls_frame)
+        self.controls_frame_window = self.canvas.create_window(997, 100, anchor="nw", window=self.controls_frame)
 
         # Dateiauswahl
         self.file_button = tk.Button(self.controls_frame, text="Datei auswählen", command=self.load_csv, bg="#104e8b", fg="white")
@@ -61,7 +63,7 @@ class CSVViewerApp:
         self.logo_label.pack(pady=20)
 
         # Download Button
-        self.download_button = tk.Button(self.controls_frame, text="Download", command=self.download_plot, bg="#104e8b", fg="white")
+        self.download_button = tk.Button(self.controls_frame, text="Speichern", command=self.download_plot, bg="#104e8b", fg="white")
         self.download_button.pack(pady=5)
 
     def load_csv(self):
