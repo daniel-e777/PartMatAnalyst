@@ -18,27 +18,30 @@ class CSVViewerApp:
         self.canvas.pack(fill="both", expand=True)
 
         # Hintergrundbild laden und skalieren
-        self.bg_image = Image.open("orcaparadise.jpg")  # Update the path to your background image
+        self.bg_image = Image.open("orcaparadise.jpg") 
         self.bg_image = self.bg_image.resize((1200, 700), Image.Resampling.LANCZOS)
         self.bg_photo = ImageTk.PhotoImage(self.bg_image)
         self.canvas.create_image(0, 0, image=self.bg_photo, anchor="nw")
 
         # Menübutton und Datum/Uhrzeit
         self.menu_button = tk.Button(root, text="Menübutton")
-        self.menu_button_window = self.canvas.create_window(10, 10, anchor="nw", window=self.menu_button)
+        self.menu_button_window = self.canvas.create_window(20, 10, anchor="nw", window=self.menu_button)
 
         self.datetime_label_bg = tk.Label(root, bg="white", width=20)
-        self.datetime_label_bg_window = self.canvas.create_window(1100, 10, anchor="ne", window=self.datetime_label_bg)
+        self.datetime_label_bg_window = self.canvas.create_window(1147, 10, anchor="ne", window=self.datetime_label_bg)
 
         self.datetime_label = tk.Label(root, text="", bg="white", width=20)
-        self.datetime_label_window = self.canvas.create_window(1100, 10, anchor="ne", window=self.datetime_label)
+        self.datetime_label_window = self.canvas.create_window(1147, 10, anchor="ne", window=self.datetime_label)
         self.update_datetime()
 
-        # Plot Bereich
+        # Graph erstellen
         self.figure, self.ax = plt.subplots()
+        self.ax.imshow(self.bg_image, aspect='auto', extent=[0, 10, 0, 10], zorder=-1)
+        self.figure.patch.set_facecolor("#424a46")
         self.canvas_figure = FigureCanvasTkAgg(self.figure, root)
         self.canvas_figure.get_tk_widget().pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=20, pady=20)
         self.canvas.create_window(20, 50, anchor="nw", window=self.canvas_figure.get_tk_widget())
+        
 
         # Steuerbereich auf der rechten Seite
         self.controls_frame = tk.Frame(self.canvas)
@@ -53,8 +56,8 @@ class CSVViewerApp:
         self.details_label.pack(pady=5)
 
         # Logo
-        self.logo_image = Image.open("orcanado.png")  # Update the path to your logo
-        self.logo_image = self.logo_image.resize((150, 150), Image.Resampling.LANCZOS)  # Resize the image
+        self.logo_image = Image.open("orcanado.png")  
+        self.logo_image = self.logo_image.resize((150, 150), Image.Resampling.LANCZOS)  
         self.logo_photo = ImageTk.PhotoImage(self.logo_image)
         self.logo_label = tk.Label(self.controls_frame, image=self.logo_photo)
         self.logo_label.pack(pady=20)
@@ -106,14 +109,14 @@ class CSVViewerApp:
         self.ax.set_title('Messwerte von P1 und P2')
         self.ax.set_xlabel('Zeit (Stunden)')
         self.ax.set_ylabel('Werte (P1, P2)')
-        self.ax.set_xticks(range(0, 25))  # Zeigt die Stunden von 0 bis 24
+        self.ax.set_xticks(range(0, 25))  
         self.ax.grid(True, alpha=0.7)
         self.ax.legend()
         self.canvas_figure.draw()
 
     def update_datetime(self):
         now = datetime.now()
-        current_time = now.strftime("%Y-%m-%d %H:%M:%S")
+        current_time = now.strftime("%d.%m%Y %H:%M:%S")
         self.datetime_label.config(text=current_time)
         self.root.after(1000, self.update_datetime)
 
