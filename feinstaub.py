@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import csv
 from datetime import datetime
+from tkcalendar import Calendar  
 
 bg_color = "#87cefa"
 
@@ -44,7 +45,6 @@ class CSVViewerApp:
         self.canvas_figure.get_tk_widget().pack(side=tk.LEFT, padx=20, pady=20)
         self.canvas.create_window(40, 100, anchor="nw", window=self.canvas_figure.get_tk_widget())
         
-
         # Steuerbereich auf der rechten Seite
         self.controls_frame = tk.Frame(self.canvas, bg=bg_color)
         self.controls_frame_window = self.canvas.create_window(997, 100, anchor="nw", window=self.controls_frame)
@@ -63,6 +63,20 @@ class CSVViewerApp:
         # Download Button
         self.download_button = tk.Button(self.controls_frame, text="Speichern", command=self.download_plot, bg="#104e8b", fg="white")
         self.download_button.pack(pady=5)
+
+        # Kalender Widget
+        self.calendar = Calendar(
+            self.canvas, 
+            selectmode='day', 
+            year=datetime.now().year, 
+            month=datetime.now().month, 
+            day=datetime.now().day,
+            background="light blue",
+            foreground="dark blue",  
+            selectbackground="dark blue",  
+            selectforeground="white"
+            )
+        self.calendar_window = self.canvas.create_window(900, 400, anchor="nw", window=self.calendar)
 
     def load_csv(self):
         file_path = filedialog.askopenfilename(
