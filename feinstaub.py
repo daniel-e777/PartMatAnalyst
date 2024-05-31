@@ -53,8 +53,6 @@ class CSVViewerApp:
         self.file_button = tk.Button(self.controls_frame, text="Datei auswählen", command=self.load_csv, bg="#104e8b", fg="white")
         self.file_button.pack(pady=5)
 
-    
-
         # Logo
         self.logo_image = Image.open("orca.png")
         self.logo_image = self.logo_image.resize((150, 150), Image.Resampling.LANCZOS)
