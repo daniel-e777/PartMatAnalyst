@@ -13,7 +13,7 @@ bg_color = "#87cefa"
 class CSVViewerApp:
     def __init__(self, root):
         self.root = root
-        self.root.title("CSV Viewer")
+        self.root.title("Partmatanalyst")
         self.root.geometry("1200x700")
 
         # Canvas erstellen
