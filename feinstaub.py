@@ -27,14 +27,18 @@ class CSVViewerApp:
         self.canvas.create_image(0, 0, image=self.bg_photo, anchor="nw")
 
         # Menübutton und Datum/Uhrzeit
-        self.menu_button = tk.Button(root, text="Menübutton", bg="#104e8b", fg="white")
+        self.menu_button = tk.Button(root, text="Appschließen (lol)", bg="#104e8b", fg="white", command=quit)
         self.menu_button_window = self.canvas.create_window(40, 10, anchor="nw", window=self.menu_button)
 
+       
+
+        # Uhrzeit und Datum
+
         self.datetime_label_bg = tk.Label(root, bg=bg_color, width=20)
-        self.datetime_label_bg_window = self.canvas.create_window(1147, 10, anchor="ne", window=self.datetime_label_bg)
+        self.datetime_label_bg_window = self.canvas.create_window(1175, 10, anchor="ne", window=self.datetime_label_bg)
 
         self.datetime_label = tk.Label(root, text="", bg=bg_color, width=20)
-        self.datetime_label_window = self.canvas.create_window(1147, 10, anchor="ne", window=self.datetime_label)
+        self.datetime_label_window = self.canvas.create_window(1175, 10, anchor="ne", window=self.datetime_label, width = 280)
         self.update_datetime()
 
         # Graph erstellen
@@ -47,7 +51,9 @@ class CSVViewerApp:
         
         # Steuerbereich auf der rechten Seite
         self.controls_frame = tk.Frame(self.canvas, bg=bg_color)
-        self.controls_frame_window = self.canvas.create_window(997, 100, anchor="nw", window=self.controls_frame)
+        self.controls_frame_window = self.canvas.create_window(897, 100, anchor="nw", window=self.controls_frame, width= 280, height= 500)
+
+        
 
         # Dateiauswahl
         self.file_button = tk.Button(self.controls_frame, text="Datei auswählen", command=self.load_csv, bg="#104e8b", fg="white")
@@ -60,13 +66,17 @@ class CSVViewerApp:
         self.logo_label = tk.Label(self.controls_frame, image=self.logo_photo)
         self.logo_label.pack(pady=20)
 
-        # Download Button
-        self.download_button = tk.Button(self.controls_frame, text="Speichern", command=self.download_plot, bg="#104e8b", fg="white")
-        self.download_button.pack(pady=5)
+         # Eingabe
+        self.input = tk.Entry(self.controls_frame, bg="#104e8b", fg="white")
+        #self.input_window = self.canvas.create_window(945, 275,anchor="nw", window=self.input)
+        self.input.insert(0,"Sensor (z.B. bme280)")
+        self.input.pack(pady=5)
+
+      
 
         # Kalender Widget
         self.calendar = Calendar(
-            self.canvas, 
+            self.controls_frame, 
             selectmode='day', 
             year=datetime.now().year, 
             month=datetime.now().month, 
@@ -76,7 +86,12 @@ class CSVViewerApp:
             selectbackground="dark blue",  
             selectforeground="white"
             )
-        self.calendar_window = self.canvas.create_window(900, 400, anchor="nw", window=self.calendar)
+        self.calendar.pack()
+        #self.calendar_window = self.canvas.create_window(900, 400, anchor="nw", window=self.calendar)
+
+          # Download Button
+        self.download_button = tk.Button(self.controls_frame, text="Speichern", command=self.download_plot, bg="#104e8b", fg="white")
+        self.download_button.pack(pady=5)
 
     def load_csv(self):
         file_path = filedialog.askopenfilename(
@@ -150,6 +165,10 @@ class CSVViewerApp:
         current_time = now.strftime("%d.%m.%Y %H:%M:%S")
         self.datetime_label.config(text=current_time)
         self.root.after(1000, self.update_datetime)
+
+# App schließen
+    def quit():
+        root.destroy()
 
 if __name__ == "__main__":
     root = tk.Tk()
