@@ -7,8 +7,20 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import csv
 from datetime import datetime
 from tkcalendar import Calendar  
+import sqlite3
+import requests
 
 bg_color = "#87cefa"
+
+ 
+
+
+
+
+
+
+
+
 
 class CSVViewerApp:
     def __init__(self, root):
@@ -66,11 +78,13 @@ class CSVViewerApp:
         self.logo_label = tk.Label(self.controls_frame, image=self.logo_photo)
         self.logo_label.pack(pady=20)
 
-         # Eingabe
-        self.input = tk.Entry(self.controls_frame, bg="#104e8b", fg="white")
+        # Sensor-ID-Label und Eingabe
+        self.sensor_id_label = tk.Label(self.controls_frame, text="Sensor ID:")
+        self.sensor_id_label.pack()
+        self.sensor_id_input = tk.Entry(self.controls_frame, bg="#104e8b", fg="white")
         #self.input_window = self.canvas.create_window(945, 275,anchor="nw", window=self.input)
-        self.input.insert(0,"Sensor (z.B. bme280)")
-        self.input.pack(pady=5)
+       
+        self.sensor_id_input.pack(pady=5)
 
       
 
@@ -84,14 +98,79 @@ class CSVViewerApp:
             background="light blue",
             foreground="dark blue",  
             selectbackground="dark blue",  
-            selectforeground="white"
+            selectforeground="white",
+            date_pattern="yyyy/mm/dd"
             )
         self.calendar.pack()
         #self.calendar_window = self.canvas.create_window(900, 400, anchor="nw", window=self.calendar)
 
+        self.select_button = tk.Button(self.controls_frame,text="Auswählen", command=self.url_data , bg="#104e8b", fg="white")
+        self.select_button.pack(side= "left")
+        
+
           # Download Button
-        self.download_button = tk.Button(self.controls_frame, text="Speichern", command=self.download_plot, bg="#104e8b", fg="white")
-        self.download_button.pack(pady=5)
+        self.download_button = tk.Button(self.controls_frame, text="Speichern", command=self.check_and_update_database(gesamt_url=self.generate_url.), bg="#104e8b", fg="white")
+        self.download_button.pack(side = "right")
+
+    def generate_url(j, datum, sensor_id, url):
+        date_url = datum
+        url = "https://archive.sensor.community/"
+        sensor_url = f"_sds011_sensor_{sensor_id}"
+        gesamt_url = f"{url}{j}/{date_url}/{sensor_url}.csv"
+        print(gesamt_url)
+        
+    
+
+    def url_data(self):
+        datepicker= self.calendar.get_date()
+        datum = datepicker
+        sensor_id = self.sensor_id_input.get()
+        url = "https://archive.sensor.community/"
+
+        self.generate_url(datum, sensor_id,url) 
+        
+
+    def check_and_update_database(self,datum,gesamt_url):
+        conn = sqlite3.connect('part_mat_data.db')
+        cursor = conn.cursor()
+        datum_start = str(datum)
+        datum_end = str(datum)
+        
+        
+        # Erstelle die Tabelle, falls sie nicht existiert
+        cursor.execute("""CREATE TABLE IF NOT EXISTS sensordata (
+                        timestamp TEXT,
+                        sensorid INTEGER,
+                        p1 REAL,
+                        p2 REAL,
+                        location TEXT)""")
+        cursor.execute("SELECT COUNT(*) FROM sensordata WHERE timestamp BETWEEN ? AND ?", (datum_start,datum_end))
+        count = cursor.fetchone()[0]
+        download_data = requests.get(gesamt_url)
+        if count == 0:
+            
+            # Bestimme die Jahre und Monate im Zeitraum
+            datum_start = datetime.strptime(datum, '%Y-%m-%d')
+            datum_end = datetime.strptime(datum, '%Y-%m-%d')
+            
+            # Schleife durch die Monate im Zeitraum
+            current_dt = datum_start
+            while current_dt <= datum_end:
+                df = generate_url(datum.year, datum.month)
+                if df is not None:
+                    # Filtere die Daten für den spezifischen Zeitraum
+                    df['timestamp'] = pd.to_datetime(df['timestamp'])
+                    df = df[(df['timestamp'] >= datum_start) & (df['timestamp'] <= datum_end)]
+                    df.to_sql('sensordata', conn, if_exists='append', index=False)
+                current_dt = (current_dt.replace(day=1) + pd.DateOffset(months=1))
+            
+            messagebox.showinfo("Erfolg", "Daten erfolgreich heruntergeladen und in die Datenbank eingefügt")
+        else:
+            messagebox.showinfo("Information", "Daten für diesen Zeitraum sind bereits in der Datenbank")
+        
+        conn.commit()
+        conn.close()
+
 
     def load_csv(self):
         file_path = filedialog.askopenfilename(
@@ -166,7 +245,10 @@ class CSVViewerApp:
         self.datetime_label.config(text=current_time)
         self.root.after(1000, self.update_datetime)
 
-# App schließen
+
+
+            
+    # App schließen
     def quit():
         root.destroy()
 
