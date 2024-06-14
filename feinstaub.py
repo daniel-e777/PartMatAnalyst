@@ -109,7 +109,7 @@ class CSVViewerApp:
         
 
           # Download Button
-        self.download_button = tk.Button(self.controls_frame, text="Speichern", command=self.check_and_update_database(gesamt_url=self.generate_url.), bg="#104e8b", fg="white")
+        self.download_button = tk.Button(self.controls_frame, text="Speichern", command=self.check_and_update_database , bg="#104e8b", fg="white")
         self.download_button.pack(side = "right")
 
     def generate_url(j, datum, sensor_id, url):
