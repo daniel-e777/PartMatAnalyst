@@ -99,7 +99,7 @@ class CSVViewerApp:
             foreground="dark blue",  
             selectbackground="dark blue",  
             selectforeground="white",
-            date_pattern="yyyy/mm/dd"
+            date_pattern="yyyy-mm-dd"
             )
         self.calendar.pack()
         #self.calendar_window = self.canvas.create_window(900, 400, anchor="nw", window=self.calendar)
@@ -112,18 +112,18 @@ class CSVViewerApp:
         self.download_button = tk.Button(self.controls_frame, text="Speichern", command=self.check_and_update_database , bg="#104e8b", fg="white")
         self.download_button.pack(side = "right")
 
-    def generate_url(j, datum, sensor_id, url):
+    def generate_url(j,datum, sensor_id, url):
         date_url = datum
-        url = "https://archive.sensor.community/"
+        url = "https://archive.sensor.community"
         sensor_url = f"_sds011_sensor_{sensor_id}"
-        gesamt_url = f"{url}{j}/{date_url}/{sensor_url}.csv"
+        gesamt_url = f"{url}/{date_url}/{date_url}{sensor_url}.csv"
         print(gesamt_url)
+        return gesamt_url
         
     
 
     def url_data(self):
-        datepicker= self.calendar.get_date()
-        datum = datepicker
+        datum= self.calendar.get_date()
         sensor_id = self.sensor_id_input.get()
         url = "https://archive.sensor.community/"
 
