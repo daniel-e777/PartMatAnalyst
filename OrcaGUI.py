@@ -103,7 +103,7 @@ class CSVViewerApp:
 
         # Label for the background image
         self.loading_bg_label = tk.Label(self.root, image=self.bg_photo)
-        self.loading_bg_label.place_forget()  # Initially hidden
+        self.loading_bg_label.place_forget()  
 
         # Loading GIF with the background image
         self.loading_gif = Image.open("orcas.gif")
@@ -117,7 +117,7 @@ class CSVViewerApp:
         """Overlay the GIF frame on the background image."""
         bg_image = self.bg_image.copy()
         gif_frame = gif_frame.convert("RGBA").resize((500, 500), Image.Resampling.LANCZOS)
-        bg_image.paste(gif_frame, (350, 100), gif_frame)  # Centered positioning
+        bg_image.paste(gif_frame, (350, 100), gif_frame) 
         return ImageTk.PhotoImage(bg_image)
 
     def on_confirm(self):
@@ -145,7 +145,7 @@ class CSVViewerApp:
                 frame = self.loading_frames[frame_index]
                 self.loading_label.config(image=frame)
                 frame_index = (frame_index + 1) % len(self.loading_frames)
-                self.root.after(50, next_frame, frame_index)  # Adjusted timing for smoother animation
+                self.root.after(50, next_frame, frame_index)  
 
         next_frame()
 
@@ -240,12 +240,10 @@ class CSVViewerApp:
         self.ax.plot(self.df['time_in_days'] * 24, self.df['P1'], color='blue', alpha=0.7, label='P1')
         self.ax.plot(self.df['time_in_days'] * 24, self.df['P2'], color='green', alpha=0.7, label='P2')
 
-        # Set title to reflect the selected date range
         start_date = date_list[0]
         end_date = date_list[-1]
         self.ax.set_title(f'P1 und P2 vom {start_date} bis {end_date}')
 
-        # Set x-axis labels to reflect days
         self.ax.set_xlabel('Zeit in Stunden')
         self.ax.set_ylabel('Konzentration (µg/m³)')
         max_days = int(self.df['time_in_days'].max()) + 1
