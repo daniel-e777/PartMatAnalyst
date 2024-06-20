@@ -1,3 +1,56 @@
+"""
+PartMatAnalystApp
+
+Eine GUI-Anwendung zur Anzeige und Analyse von CSV-Daten aus verschiedenen Tagen. 
+Diese Anwendung ermöglicht es, Daten aus mehreren Tagen herunterzuladen, zu verarbeiten und grafisch darzustellen.
+
+Klasse:
+    PartMatAnalystApp
+
+Methoden:
+    __init__(self, root):
+        Initialisiert die GUI und alle Widgets.
+
+    overlay_gif_on_bg(self, gif_frame):
+        Überlagert ein GIF-Frame auf das Hintergrundbild.
+
+    on_confirm(self):
+        Startet den Prozess zum Herunterladen und Verarbeiten von CSV-Daten basierend auf den Benutzereinstellungen.
+
+    animate_loading(self):
+        Animation des Lade-GIFs während des Herunterladens der Daten.
+
+    download_and_load_csv(self, date_list):
+        Lädt die CSV-Daten für die angegebenen Daten herunter, speichert sie in der Datenbank und verarbeitet sie.
+
+    create_table(self, conn):
+        Erstellt die SQLite-Tabelle, wenn sie nicht existiert.
+
+    check_database(self, conn, date_str):
+        Überprüft die Datenbank, ob Daten für das angegebene Datum vorhanden sind.
+
+    save_to_database(self, conn, date_str, df):
+        Speichert die CSV-Daten in der Datenbank.
+
+    download_csv(self, date_str):
+        Lädt die CSV-Datei für das angegebene Datum herunter.
+
+    process_dataframe(self, df, date_str, day_offset):
+        Verarbeitet den DataFrame, um notwendige Spalten hinzuzufügen.
+
+    show_error(self, message):
+        Zeigt eine Fehlermeldung an.
+
+    plot_data(self, date_list):
+        Plottet die Daten und zeigt sie im GUI-Fenster an.
+
+    download_plot(self):
+        Speichert den aktuellen Plot als PNG-Datei.
+
+    update_datetime(self):
+        Aktualisiert das Datum und die Uhrzeit im GUI-Fenster.
+"""
+
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 from PIL import Image, ImageTk, ImageSequence
@@ -18,6 +71,12 @@ bg_color = "#87cefa"
 
 class PartMatAnalystApp:
     def __init__(self, root):
+        """
+        Initialisiert die GUI und alle Widgets.
+
+        Parameter:
+            root (tk.Tk): Das Hauptfenster der Anwendung.
+        """
         self.root = root
         self.root.title("PartMatAnalyst")
         self.root.geometry("1200x700")
@@ -104,13 +163,24 @@ class PartMatAnalystApp:
         self.loading = False
 
     def overlay_gif_on_bg(self, gif_frame):
-        """Overlay the GIF frame on the background image."""
+        """
+        Überlagert ein GIF-Frame auf das Hintergrundbild.
+
+        Parameter:
+            gif_frame (PIL.Image): Ein einzelner Frame des GIFs.
+
+        Rückgabe:
+            ImageTk.PhotoImage: Das überlagerte Bild.
+        """
         bg_image = self.bg_image.copy()
         gif_frame = gif_frame.convert("RGBA").resize((500, 500), Image.Resampling.LANCZOS)
         bg_image.paste(gif_frame, (350, 100), gif_frame)
         return ImageTk.PhotoImage(bg_image)
 
     def on_confirm(self):
+        """
+        Startet den Prozess zum Herunterladen und Verarbeiten von CSV-Daten basierend auf den Benutzereinstellungen.
+        """
         start_date = self.start_date_calendar.get_date()
         start_date_obj = datetime.strptime(start_date, "%m/%d/%y")
         num_days = self.days_var.get()
@@ -126,6 +196,9 @@ class PartMatAnalystApp:
         thread.start()
 
     def animate_loading(self):
+        """
+        Animation des Lade-GIFs während des Herunterladens der Daten.
+        """
         def next_frame(frame_index=0):
             if self.loading:
                 frame = self.loading_frames[frame_index]
@@ -136,6 +209,12 @@ class PartMatAnalystApp:
         next_frame()
 
     def download_and_load_csv(self, date_list):
+        """
+        Lädt die CSV-Daten für die angegebenen Daten herunter, speichert sie in der Datenbank und verarbeitet sie.
+
+        Parameter:
+            date_list (list): Liste der Daten, für die die CSV-Daten heruntergeladen werden sollen.
+        """
         conn = sqlite3.connect("part_mat_data.db")
         self.create_table(conn)
         try:
@@ -162,7 +241,12 @@ class PartMatAnalystApp:
             self.loading_label.place_forget()
 
     def create_table(self, conn):
-        """Create the table if it doesn't exist."""
+        """
+        Erstellt die SQLite-Tabelle, wenn sie nicht existiert.
+
+        Parameter:
+            conn (sqlite3.Connection): Verbindung zur SQLite-Datenbank.
+        """
         with conn:
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS sensor_data (
@@ -173,7 +257,16 @@ class PartMatAnalystApp:
             """)
 
     def check_database(self, conn, date_str):
-        """Check if the data for the given date is in the database."""
+        """
+        Überprüft die Datenbank, ob Daten für das angegebene Datum vorhanden sind.
+
+        Parameter:
+            conn (sqlite3.Connection): Verbindung zur SQLite-Datenbank.
+            date_str (str): Datum als Zeichenkette.
+
+        Rückgabe:
+            pd.DataFrame: DataFrame mit den Daten für das angegebene Datum, falls vorhanden.
+        """
         cursor = conn.cursor()
         cursor.execute("SELECT data FROM sensor_data WHERE date = ?", (date_str,))
         row = cursor.fetchone()
@@ -183,13 +276,28 @@ class PartMatAnalystApp:
         return None
 
     def save_to_database(self, conn, date_str, df):
-        """Save the data to the database."""
+        """
+        Speichert die CSV-Daten in der Datenbank.
+
+        Parameter:
+            conn (sqlite3.Connection): Verbindung zur SQLite-Datenbank.
+            date_str (str): Datum als Zeichenkette.
+            df (pd.DataFrame): DataFrame mit den zu speichernden Daten.
+        """
         data = df.to_csv(index=False, sep=';').encode('utf-8')
         with conn:
             conn.execute("INSERT INTO sensor_data (date, data) VALUES (?, ?)", (date_str, data))
 
     def download_csv(self, date_str):
-        """Download the CSV file for the given date."""
+        """
+        Lädt die CSV-Datei für das angegebene Datum herunter.
+
+        Parameter:
+            date_str (str): Datum als Zeichenkette.
+
+        Rückgabe:
+            pd.DataFrame: DataFrame mit den heruntergeladenen Daten.
+        """
         try:
             year = date_str.split('-')[0]
             if int(year) <= 2022:
@@ -239,7 +347,17 @@ class PartMatAnalystApp:
             return None
 
     def process_dataframe(self, df, date_str, day_offset):
-        """Process the dataframe to add necessary columns."""
+        """
+        Verarbeitet den DataFrame, um notwendige Spalten hinzuzufügen.
+
+        Parameter:
+            df (pd.DataFrame): Der ursprüngliche DataFrame.
+            date_str (str): Datum als Zeichenkette.
+            day_offset (int): Offset für die Tage, um die Daten korrekt darzustellen.
+
+        Rückgabe:
+            pd.DataFrame: Der verarbeitete DataFrame.
+        """
         start_date = pd.to_datetime(date_str)
         df['timestamp'] = pd.to_datetime(df['timestamp'])
         df['day'] = day_offset
@@ -250,12 +368,24 @@ class PartMatAnalystApp:
         return df
 
     def show_error(self, message):
+        """
+        Zeigt eine Fehlermeldung an.
+
+        Parameter:
+            message (str): Die anzuzeigende Fehlermeldung.
+        """
         self.loading = False
         self.loading_bg_label.place_forget()
         self.loading_label.place_forget()
         messagebox.showerror("Fehler", message)
 
     def plot_data(self, date_list):
+        """
+        Plottet die Daten und zeigt sie im GUI-Fenster an.
+
+        Parameter:
+            date_list (list): Liste der Daten, für die die Daten geplottet werden sollen.
+        """
         self.ax.clear()
 
         # Plot für P1 und P2
@@ -314,6 +444,9 @@ class PartMatAnalystApp:
         self.canvas_figure.draw()
 
     def download_plot(self):
+        """
+        Speichert den aktuellen Plot als PNG-Datei.
+        """
         file_path = filedialog.asksaveasfilename(
             defaultextension=".png",
             filetypes=[("PNG files", "*.png"), ("All files", "*.*")],
@@ -326,6 +459,9 @@ class PartMatAnalystApp:
                 messagebox.showerror("Fehler", f"Fehler beim Speichern des Graphen: {e}")
 
     def update_datetime(self):
+        """
+        Aktualisiert das Datum und die Uhrzeit im GUI-Fenster.
+        """
         now = datetime.now()
         current_time = now.strftime("%d.%m.%Y %H:%M:%S")
         self.datetime_label.config(text=current_time)
