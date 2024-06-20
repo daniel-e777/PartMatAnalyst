@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import filedialog, messagebox
+from tkinter import filedialog, messagebox, ttk
 from PIL import Image, ImageTk, ImageSequence
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -12,6 +12,9 @@ import requests
 from bs4 import BeautifulSoup
 import threading
 import time
+import sqlite3
+import io
+import gzip
 
 bg_color = "#87cefa"
 
@@ -43,7 +46,7 @@ class CSVViewerApp:
         self.update_datetime()
 
         # Graph erstellen
-        self.figure, self.ax = plt.subplots(figsize=(10, 6))
+        self.figure, self.ax = plt.subplots(figsize=(8.5, 5.5))
         self.figure.patch.set_facecolor("#87cefa")
         self.ax.imshow(self.bg_image, aspect='auto', extent=[0, 10, 0, 10], zorder=-1)
         self.canvas_figure = FigureCanvasTkAgg(self.figure, root)
@@ -63,28 +66,19 @@ class CSVViewerApp:
             year=datetime.now().year,
             month=datetime.now().month,
             day=datetime.now().day,
-            background="light blue",  # Hintergrundfarbe des Kalenders
-            foreground="dark blue",   # Textfarbe des Kalenders
-            selectbackground="dark blue",  # Hintergrundfarbe des ausgewählten Datums
-            selectforeground="white"   # Textfarbe des ausgewählten Datums
+            background="light blue",
+            foreground="dark blue",
+            selectbackground="dark blue",
+            selectforeground="white"
         )
         self.start_date_calendar.pack(pady=5)
 
-        # Kalender Widget für Enddatum
-        self.end_date_label = tk.Label(self.controls_frame, text="Enddatum auswählen:", bg=bg_color)
-        self.end_date_label.pack(pady=5)
-        self.end_date_calendar = Calendar(
-            self.controls_frame,
-            selectmode='day',
-            year=datetime.now().year,
-            month=datetime.now().month,
-            day=datetime.now().day,
-            background="light blue",  # Hintergrundfarbe des Kalenders
-            foreground="dark blue",   # Textfarbe des Kalenders
-            selectbackground="dark blue",  # Hintergrundfarbe des ausgewählten Datums
-            selectforeground="white"   # Textfarbe des ausgewählten Datums
-        )
-        self.end_date_calendar.pack(pady=5)
+        # Dropdown für Anzahl der Tage
+        self.days_label = tk.Label(self.controls_frame, text="Anzahl der Tage auswählen:", bg=bg_color)
+        self.days_label.pack(pady=5)
+        self.days_var = tk.IntVar(value=1)
+        self.days_dropdown = ttk.Combobox(self.controls_frame, textvariable=self.days_var, values=[i for i in range(1, 31)])
+        self.days_dropdown.pack(pady=5)
 
         # Bestätigungsbutton
         self.confirm_button = tk.Button(self.controls_frame, text="Daten laden", command=self.on_confirm, bg="#104e8b", fg="white")
@@ -101,11 +95,11 @@ class CSVViewerApp:
         self.download_button = tk.Button(self.controls_frame, text="Speichern", command=self.download_plot, bg="#104e8b", fg="white")
         self.download_button.pack(pady=5)
 
-        # Label for the background image
+        # Label für Hintergrundbild
         self.loading_bg_label = tk.Label(self.root, image=self.bg_photo)
-        self.loading_bg_label.place_forget()  
+        self.loading_bg_label.place_forget()
 
-        # Loading GIF with the background image
+        # Loading GIF mit Hintergrundbild
         self.loading_gif = Image.open("orcas.gif")
         self.loading_frames = [self.overlay_gif_on_bg(frame) for frame in ImageSequence.Iterator(self.loading_gif)]
         self.loading_label = tk.Label(self.root)
@@ -117,19 +111,15 @@ class CSVViewerApp:
         """Overlay the GIF frame on the background image."""
         bg_image = self.bg_image.copy()
         gif_frame = gif_frame.convert("RGBA").resize((500, 500), Image.Resampling.LANCZOS)
-        bg_image.paste(gif_frame, (350, 100), gif_frame) 
+        bg_image.paste(gif_frame, (350, 100), gif_frame)
         return ImageTk.PhotoImage(bg_image)
 
     def on_confirm(self):
         start_date = self.start_date_calendar.get_date()
-        end_date = self.end_date_calendar.get_date()
         start_date_obj = datetime.strptime(start_date, "%m/%d/%y")
-        end_date_obj = datetime.strptime(end_date, "%m/%d/%y")
-        if end_date_obj < start_date_obj:
-            messagebox.showerror("Fehler", "Enddatum darf nicht vor dem Startdatum liegen.")
-            return
+        num_days = self.days_var.get()
 
-        date_list = [(start_date_obj + timedelta(days=i)).strftime('%Y-%m-%d') for i in range((end_date_obj - start_date_obj).days + 1)]
+        date_list = [(start_date_obj + timedelta(days=i)).strftime('%Y-%m-%d') for i in range(num_days)]
 
         self.loading = True
         self.loading_bg_label.place(x=0, y=0, relwidth=1, relheight=1)
@@ -145,93 +135,129 @@ class CSVViewerApp:
                 frame = self.loading_frames[frame_index]
                 self.loading_label.config(image=frame)
                 frame_index = (frame_index + 1) % len(self.loading_frames)
-                self.root.after(50, next_frame, frame_index)  
+                self.root.after(50, next_frame, frame_index)
 
         next_frame()
 
     def download_and_load_csv(self, date_list):
+        conn = sqlite3.connect("part_mat_data.db")
+        self.create_table(conn)
         try:
             data_frames = []
             for date_str in date_list:
-                base_url = f"http://archive.sensor.community/{date_str}/"
-                retries = 3
-                for _ in range(retries):
-                    try:
-                        response = requests.get(base_url, timeout=10)
-                        response.raise_for_status()
-                        break
-                    except requests.RequestException:
-                        time.sleep(5)
-                else:
-                    self.show_error(f"Fehler beim Herunterladen der Datei: {base_url}")
-                    continue
-
-                soup = BeautifulSoup(response.content, "html.parser")
-                file_name = None
-
-                for link in soup.find_all('a'):
-                    href = link.get('href')
-                    if href and 'sds011' in href and href.endswith('.csv'):
-                        file_name = href
-                        break
-
-                if file_name:
-                    file_url = f"{base_url}{file_name}"
-                    local_file_path = os.path.join(os.getcwd(), file_name)
-                    if not os.path.exists(local_file_path):
-                        response = requests.get(file_url)
-                        response.raise_for_status()
-                        with open(local_file_path, 'wb') as file:
-                            file.write(response.content)
-
-                    df = self.load_csv(local_file_path, date_str)
+                df = self.check_database(conn, date_str)
+                if df is None:
+                    df = self.download_csv(date_str)
                     if df is not None:
-                        data_frames.append(df)
-                else:
-                    self.show_error(f"Keine Dateien für das Datum {date_str} gefunden.")
+                        self.save_to_database(conn, date_str, df)
+                if df is not None:
+                    df = self.process_dataframe(df, date_str)
+                    data_frames.append(df)
 
             if data_frames:
                 self.df = pd.concat(data_frames, ignore_index=True)
                 self.plot_data(date_list)
-        except requests.RequestException as e:
-            self.show_error(f"Fehler beim Herunterladen der Datei: {e}")
+        except Exception as e:
+            self.show_error(f"Fehler beim Verarbeiten der Daten: {e}")
         finally:
+            conn.close()
             self.loading = False
             self.loading_bg_label.place_forget()
             self.loading_label.place_forget()
+
+    def create_table(self, conn):
+        """Create the table if it doesn't exist."""
+        with conn:
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS sensor_data (
+                    id INTEGER PRIMARY KEY,
+                    date TEXT,
+                    data BLOB
+                )
+            """)
+
+    def check_database(self, conn, date_str):
+        """Check if the data for the given date is in the database."""
+        cursor = conn.cursor()
+        cursor.execute("SELECT data FROM sensor_data WHERE date = ?", (date_str,))
+        row = cursor.fetchone()
+        if row:
+            data = row[0]
+            return pd.read_csv(io.StringIO(data.decode('utf-8')), delimiter=';')
+        return None
+
+    def save_to_database(self, conn, date_str, df):
+        """Save the data to the database."""
+        data = df.to_csv(index=False, sep=';').encode('utf-8')
+        with conn:
+            conn.execute("INSERT INTO sensor_data (date, data) VALUES (?, ?)", (date_str, data))
+
+    def download_csv(self, date_str):
+        """Download the CSV file for the given date."""
+        try:
+            year = date_str.split('-')[0]
+            if int(year) <= 2022:
+                base_url = f"http://archive.sensor.community/{year}/{date_str}/"
+            else:
+                base_url = f"http://archive.sensor.community/{date_str}/"
+
+            print(f"Attempting to access URL: {base_url}")  # Debugging information
+
+            retries = 3
+            for _ in range(retries):
+                try:
+                    response = requests.get(base_url, timeout=10)
+                    response.raise_for_status()
+                    break
+                except requests.RequestException:
+                    time.sleep(5)
+            else:
+                self.show_error(f"Fehler beim Herunterladen der Datei: {base_url}")
+                return None
+
+            soup = BeautifulSoup(response.content, "html.parser")
+            file_name = None
+
+            for link in soup.find_all('a'):
+                href = link.get('href')
+                if href and 'sds011' in href and (href.endswith('.csv') or href.endswith('.csv.gz')):
+                    file_name = href
+                    break
+
+            if file_name:
+                file_url = f"{base_url}{file_name}"
+                print(f"Downloading file from URL: {file_url}")  # Debugging information
+                response = requests.get(file_url)
+                response.raise_for_status()
+                if file_name.endswith('.gz'):
+                    with gzip.open(io.BytesIO(response.content), 'rt') as f:
+                        df = pd.read_csv(f, delimiter=';')
+                else:
+                    df = pd.read_csv(io.StringIO(response.content.decode('utf-8')), delimiter=';')
+                return df
+            else:
+                self.show_error(f"Keine Dateien für das Datum {date_str} gefunden.")
+                return None
+        except Exception as e:
+            self.show_error(f"Fehler beim Herunterladen der Datei: {e}")
+            return None
+
+    def process_dataframe(self, df, date_str):
+        """Process the dataframe to add necessary columns."""
+        start_date = pd.to_datetime(date_str)
+        df['timestamp'] = pd.to_datetime(df['timestamp'])
+        df['day'] = (df['timestamp'].dt.normalize() - start_date.normalize()).dt.days
+        df['time_in_hours'] = df['timestamp'].dt.hour + df['timestamp'].dt.minute / 60 + df['timestamp'].dt.second / 3600
+        df['time_in_days'] = df['day'] + df['time_in_hours'] / 24
+        df['P1'] = pd.to_numeric(df['P1'])
+        df['P2'] = pd.to_numeric(df['P2'])
+        return df
 
     def show_error(self, message):
         self.loading = False
         self.loading_bg_label.place_forget()
         self.loading_label.place_forget()
         messagebox.showerror("Fehler", message)
-
-    def load_csv(self, file_path, date_str):
-        data = []
-        try:
-            with open(file_path, mode='r', encoding='utf-8') as file:
-                reader = csv.DictReader(file, delimiter=';')
-                for row in reader:
-                    if 'timestamp' in row and 'P1' in row and 'P2' in row:
-                        row['timestamp'] = datetime.strptime(row['timestamp'], '%Y-%m-%dT%H:%M:%S')
-                        data.append(row)
-                    else:
-                        self.show_error("Die CSV-Datei muss die Spalten 'timestamp', 'P1' und 'P2' enthalten.")
-                        return None
-
-            df = pd.DataFrame(data)
-            df['timestamp'] = pd.to_datetime(df['timestamp'])
-            start_date = pd.to_datetime(date_str)
-            df['day'] = (df['timestamp'].dt.normalize() - start_date.normalize()).dt.days
-            df['time_in_hours'] = df['timestamp'].dt.hour + df['timestamp'].dt.minute / 60 + df['timestamp'].dt.second / 3600
-            df['time_in_days'] = df['day'] + df['time_in_hours'] / 24
-            df['P1'] = pd.to_numeric(df['P1'])
-            df['P2'] = pd.to_numeric(df['P2'])
-
-            return df
-        except Exception as e:
-            self.show_error(f"Fehler beim Laden der Datei: {e}")
-            return None
 
     def plot_data(self, date_list):
         self.ax.clear()
@@ -246,18 +272,31 @@ class CSVViewerApp:
 
         self.ax.set_xlabel('Zeit in Stunden')
         self.ax.set_ylabel('Konzentration (µg/m³)')
-        max_days = int(self.df['time_in_days'].max()) + 1
+        max_days = int(self.df['day'].max()) + 1
+
         x_ticks = []
         x_labels = []
-        for day in range(max_days):
-            for hour in range(24):
-                x_ticks.append(day * 24 + hour)
-                if hour == 0:
-                    x_labels.append(f'Tag {day + 1}\n{hour:02d}:00')
-                else:
-                    x_labels.append(f'{hour:02d}:00')
+
+        if len(date_list) == 1:
+            # für einzelne Tage
+            for hour in range(25):  
+                x_ticks.append(hour)
+                x_labels.append(str(hour))
+        else:
+            # für mehrere Tage (X-Achse: Tag 1, Tag 2...)
+            for day in range(max_days):
+                for hour in range(24):
+                    x_ticks.append(day * 24 + hour)
+                    if hour == 0:
+                        x_labels.append(f'Tag {day + 1}\n{hour}')
+                    else:
+                        x_labels.append(str(hour))
+                x_ticks.append((day + 1) * 24)
+                x_labels.append(f'Tag {day + 1}\n24')
+
         self.ax.set_xticks(x_ticks)
         self.ax.set_xticklabels(x_labels, rotation=45)
+        self.ax.set_xlim(left=0, right=x_ticks[-1])
         self.ax.grid(True, alpha=0.5)
         self.ax.legend()
 
