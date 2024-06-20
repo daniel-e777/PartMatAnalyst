@@ -18,7 +18,7 @@ import gzip
 
 bg_color = "#87cefa"
 
-class CSVViewerApp:
+class PartMatAnalystApp:
     def __init__(self, root):
         self.root = root
         self.root.title("PartMatAnalyst")
@@ -44,6 +44,7 @@ class CSVViewerApp:
 
         # Graph erstellen
         self.figure, self.ax = plt.subplots(figsize=(8.5, 5.5))
+        self.figure.subplots_adjust(top=0.8)  # Adjust the top space of the figure
         self.figure.patch.set_facecolor("#87cefa")
         self.ax.imshow(self.bg_image, aspect='auto', extent=[0, 10, 0, 10], zorder=-1)
         self.canvas_figure = FigureCanvasTkAgg(self.figure, root)
@@ -236,7 +237,7 @@ class CSVViewerApp:
                 self.show_error(f"Keine Dateien für das Datum {date_str} gefunden.")
                 return None
         except Exception as e:
-            self.show_error(f"Fehler beim Herunterladen der Datei: {e}")
+            self.show_error(f"Fehler beim Herunterladen der Datei: {base_url}\n{e}")
             return None
 
     def process_dataframe(self, df, date_str):
@@ -263,9 +264,28 @@ class CSVViewerApp:
         self.ax.plot(self.df['time_in_days'] * 24, self.df['P1'], color='blue', alpha=0.7, label='P1')
         self.ax.plot(self.df['time_in_days'] * 24, self.df['P2'], color='green', alpha=0.7, label='P2')
 
-        start_date = date_list[0]
-        end_date = date_list[-1]
-        self.ax.set_title(f'P1 und P2 vom {start_date} bis {end_date}')
+        if len(date_list) == 1:
+            date_text = f'P1 und P2 am {date_list[0]}'
+        else:
+            date_text = f'P1 und P2 vom {date_list[0]} bis {date_list[-1]}'
+
+        self.ax.set_title(date_text, pad=50)  # Increase padding to create more space above
+
+        # Berechnung der statistischen Werte
+        p1_max = self.df['P1'].max()
+        p1_min = self.df['P1'].min()
+        p1_mean = self.df['P1'].mean()
+
+        p2_max = self.df['P2'].max()
+        p2_min = self.df['P2'].min()
+        p2_mean = self.df['P2'].mean()
+
+        # Anzeige der statistischen Werte
+        stats_text = (
+            f"P1: Höchstwert = {p1_max:.2f}, Tiefstwert = {p1_min:.2f}, Durchschnitt = {p1_mean:.2f}\n"
+            f"P2: Höchstwert = {p2_max:.2f}, Tiefstwert = {p2_min:.2f}, Durchschnitt = {p2_mean:.2f}"
+        )
+        self.ax.text(0.5, 1.08, stats_text, transform=self.ax.transAxes, fontsize=10, va='top', ha='center')
 
         self.ax.set_xlabel('Zeit in Stunden')
         self.ax.set_ylabel('Konzentration (µg/m³)')
@@ -319,5 +339,5 @@ class CSVViewerApp:
 
 if __name__ == "__main__":
     root = tk.Tk()
-    app = CSVViewerApp(root)
+    app = PartMatAnalystApp(root)
     root.mainloop()
