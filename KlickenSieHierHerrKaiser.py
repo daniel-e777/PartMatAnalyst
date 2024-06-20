@@ -35,9 +35,6 @@ class CSVViewerApp:
         self.canvas.create_image(0, 0, image=self.bg_photo, anchor="nw")
 
         # Menübutton und Datum/Uhrzeit
-        # self.menu_button = tk.Button(root, text="Menübutton", bg="#104e8b", fg="white")
-        # self.menu_button_window = self.canvas.create_window(40, 10, anchor="nw", window=self.menu_button)
-
         self.datetime_label_bg = tk.Label(root, bg=bg_color, width=20)
         self.datetime_label_bg_window = self.canvas.create_window(1147, 10, anchor="ne", window=self.datetime_label_bg)
 
