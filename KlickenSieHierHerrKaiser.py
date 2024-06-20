@@ -4,10 +4,8 @@ from PIL import Image, ImageTk, ImageSequence
 import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-import csv
 from datetime import datetime, timedelta
 from tkcalendar import Calendar
-import os
 import requests
 from bs4 import BeautifulSoup
 import threading
@@ -44,7 +42,7 @@ class PartMatAnalystApp:
 
         # Graph erstellen
         self.figure, self.ax = plt.subplots(figsize=(8.5, 5.5))
-        self.figure.subplots_adjust(top=0.8)  # Adjust the top space of the figure
+        self.figure.subplots_adjust(top=0.88, bottom=0.14)
         self.figure.patch.set_facecolor("#87cefa")
         self.ax.imshow(self.bg_image, aspect='auto', extent=[0, 10, 0, 10], zorder=-1)
         self.canvas_figure = FigureCanvasTkAgg(self.figure, root)
@@ -142,14 +140,14 @@ class PartMatAnalystApp:
         self.create_table(conn)
         try:
             data_frames = []
-            for date_str in date_list:
+            for idx, date_str in enumerate(date_list):
                 df = self.check_database(conn, date_str)
                 if df is None:
                     df = self.download_csv(date_str)
                     if df is not None:
                         self.save_to_database(conn, date_str, df)
                 if df is not None:
-                    df = self.process_dataframe(df, date_str)
+                    df = self.process_dataframe(df, date_str, idx)
                     data_frames.append(df)
 
             if data_frames:
@@ -240,11 +238,11 @@ class PartMatAnalystApp:
             self.show_error(f"Fehler beim Herunterladen der Datei: {base_url}\n{e}")
             return None
 
-    def process_dataframe(self, df, date_str):
+    def process_dataframe(self, df, date_str, day_offset):
         """Process the dataframe to add necessary columns."""
         start_date = pd.to_datetime(date_str)
         df['timestamp'] = pd.to_datetime(df['timestamp'])
-        df['day'] = (df['timestamp'].dt.normalize() - start_date.normalize()).dt.days
+        df['day'] = day_offset
         df['time_in_hours'] = df['timestamp'].dt.hour + df['timestamp'].dt.minute / 60 + df['timestamp'].dt.second / 3600
         df['time_in_days'] = df['day'] + df['time_in_hours'] / 24
         df['P1'] = pd.to_numeric(df['P1'])
@@ -261,15 +259,17 @@ class PartMatAnalystApp:
         self.ax.clear()
 
         # Plot für P1 und P2
-        self.ax.plot(self.df['time_in_days'] * 24, self.df['P1'], color='blue', alpha=0.7, label='P1')
-        self.ax.plot(self.df['time_in_days'] * 24, self.df['P2'], color='green', alpha=0.7, label='P2')
+        self.ax.plot(self.df['time_in_days'], self.df['P1'], color='blue', alpha=0.7, label='P1')
+        self.ax.plot(self.df['time_in_days'], self.df['P2'], color='green', alpha=0.7, label='P2')
 
         if len(date_list) == 1:
             date_text = f'P1 und P2 am {date_list[0]}'
+            x_label = 'Zeit in Stunden'
         else:
             date_text = f'P1 und P2 vom {date_list[0]} bis {date_list[-1]}'
+            x_label = 'Zeit in Tagen'
 
-        self.ax.set_title(date_text, pad=50)  # Increase padding to create more space above
+        self.ax.set_title(date_text, pad=30)
 
         # Berechnung der statistischen Werte
         p1_max = self.df['P1'].max()
@@ -287,7 +287,7 @@ class PartMatAnalystApp:
         )
         self.ax.text(0.5, 1.08, stats_text, transform=self.ax.transAxes, fontsize=10, va='top', ha='center')
 
-        self.ax.set_xlabel('Zeit in Stunden')
+        self.ax.set_xlabel(x_label)
         self.ax.set_ylabel('Konzentration (µg/m³)')
         max_days = int(self.df['day'].max()) + 1
 
@@ -295,21 +295,15 @@ class PartMatAnalystApp:
         x_labels = []
 
         if len(date_list) == 1:
-            # für einzelne Tage
             for hour in range(25):  
-                x_ticks.append(hour)
+                x_ticks.append(hour / 24)
                 x_labels.append(str(hour))
         else:
-            # für mehrere Tage (X-Achse: Tag 1, Tag 2...)
             for day in range(max_days):
-                for hour in range(24):
-                    x_ticks.append(day * 24 + hour)
-                    if hour == 0:
-                        x_labels.append(f'Tag {day + 1}\n{hour}')
-                    else:
-                        x_labels.append(str(hour))
-                x_ticks.append((day + 1) * 24)
-                x_labels.append(f'Tag {day + 1}\n24')
+                x_ticks.append(day)
+                x_labels.append(f'Tag {day + 1}')
+            x_ticks.append(max_days)
+            x_labels.append(f'Tag {max_days + 1}')
 
         self.ax.set_xticks(x_ticks)
         self.ax.set_xticklabels(x_labels, rotation=45)
